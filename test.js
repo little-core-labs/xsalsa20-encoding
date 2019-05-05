@@ -2,6 +2,7 @@ const blake2b = require('blake2b')
 const crypto = require('crypto')
 const Codec = require('./')
 const test = require('tape')
+const pbs = require('protocol-buffers')
 
 test('codec = Codec(nonce, key)', (t) => {
   const nonce = crypto.randomBytes(24)
@@ -87,5 +88,17 @@ test('buffer = codec.decode(buffer[, offset])', (t) => {
     'decodes value from encoded value'
   )
 
+  t.end()
+})
+
+test('codec = Codec(key, nonce, { valueEncoding })', (t) => {
+  const { Message } = pbs('message Message { string data = 1; }')
+  const nonce = crypto.randomBytes(24)
+  const key = crypto.randomBytes(32)
+  const codec = Codec(key, nonce, { valueEncoding: Message })
+  t.deepEqual(
+    { data: 'hello world' },
+    codec.decode(codec.encode({ data: 'hello world' }))
+  )
   t.end()
 })
