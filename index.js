@@ -1,17 +1,28 @@
 const xsalsa20 = require('xsalsa20')
 const blake2b = require('blake2b')
 
-function createCodec(nonce, key) {
-  if (nonce && key && 32 === nonce.length && 24 === key.length) {
-    [ nonce, key ] = [ key, nonce ]
+class DefaultEncoding {
+  encode(value) { return value }
+  decode(value) { return value }
+}
+
+function createCodec(nonce, key, opts) {
+  if (Buffer.isBuffer(nonce) && Buffer.isBuffer(key)) {
+    if (32 === nonce.length && 24 === key.length) {
+      [ nonce, key ] = [ key, nonce ]
+    }
   }
 
   if (32 === nonce.length && !Buffer.isBuffer(key)) {
+    opts = key
     key = nonce
     nonce = Buffer.alloc(24)
     Buffer.from(blake2b(nonce.length).update(key).digest()).copy(nonce)
   }
 
+  if (!opts || 'object' !== typeof opts) {
+    opts = {}
+  }
 
   if (!Buffer.isBuffer(key)) {
     throw new TypeError('Expecting secret key to be a buffer')
@@ -29,6 +40,8 @@ function createCodec(nonce, key) {
     throw new RangeError('Expecting nonce to be at least 24 bytes')
   }
 
+  const { valueEncoding = new DefaultEncoding() } = opts
+
   nonce = nonce.slice(0, 24)
   key = key.slice(0, 32)
 
@@ -37,6 +50,7 @@ function createCodec(nonce, key) {
 
   return {
     encodingLength,
+    valueEncoding,
     encode,
     decode,
     nonce,
@@ -44,8 +58,9 @@ function createCodec(nonce, key) {
   }
 
   function encode(value, buffer, offset) {
-    const plaintext = toBuffer(value)
-    const length = encodingLength(value)
+    const encodedValue = valueEncoding.encode(value)
+    const plaintext = toBuffer(encodedValue)
+    const length = encodingLength(encodedValue)
 
     if (!Buffer.isBuffer(plaintext)) {
       throw new TypeError('Cannot convert value to a buffer')
@@ -101,7 +116,10 @@ function createCodec(nonce, key) {
     xor.finalize()
 
     decode.bytes = length
-    return plaintext
+
+    const decodedValue = valueEncoding.decode(plaintext, 0)
+
+    return decodedValue
   }
 }
 
