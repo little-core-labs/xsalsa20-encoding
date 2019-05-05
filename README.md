@@ -37,9 +37,24 @@ const world = codec.encode('world')
 console.log('%s %s', codec.decode(hello), codec.decode(world)) // 'hello world'
 ```
 
+### Custom Value Encodings
+
+```js
+const pbs = require('protocol-buffers')
+const { Message } = pbs(`
+message {
+  string data = 1;
+}
+`)
+
+const codec = Codec(nonce, key, { valueEncoding: Message })
+const encoded = codec.encode({ data: 'hello world' })
+const message = codec.decode(encoded) // { data: 'hello world' }
+```
+
 ## API
 
-### `codec = require('xsalsa20-encoding')([nonce,] secretKey)`
+### `codec = require('xsalsa20-encoding')([nonce,] secretKey[, opts])`
 
 Create a codec object from a 24 byte `nonce` and 32 byte `secretKey`. If
 only a 32 byte `nonce` is given, it is treated as a `secretKey`.
