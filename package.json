@@ -1,6 +1,6 @@
 {
   "name": "xsalsa20-encoding",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "XSalsa20 codec for encoding and decoding values into and from buffers and suitable",
   "main": "index.js",
   "scripts": {
