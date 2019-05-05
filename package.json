@@ -1,0 +1,24 @@
+{
+  "name": "xsalsa20-encoding",
+  "version": "0.0.1",
+  "description": "XSalsa20 codec for encoding and decoding values into and from buffers and suitable",
+  "main": "index.js",
+  "scripts": {
+    "test": "tape test.js"
+  },
+  "keywords": [
+    "xsalsa20",
+    "codec",
+    "value",
+    "encoding"
+  ],
+  "author": "Joseph Werle <joseph.werle@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "tape": "^4.10.1"
+  },
+  "dependencies": {
+    "blake2b": "^2.1.3",
+    "xsalsa20": "^1.0.2"
+  }
+}
