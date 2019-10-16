@@ -1,7 +1,7 @@
 xsalsa20-encoding
 =================
 
-XSalsa20 codec for encoding and decoding values into and from buffers and suitable
+> XSalsa20 codec that implements tha abstract-encoding interface.
 
 ## Installation
 

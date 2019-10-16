@@ -1,7 +1,7 @@
 {
   "name": "xsalsa20-encoding",
   "version": "0.1.0",
-  "description": "XSalsa20 codec for encoding and decoding values into and from buffers and suitable",
+  "description": "XSalsa20 codec that implements tha abstract-encoding interface.",
   "main": "index.js",
   "scripts": {
     "test": "tape test.js"
