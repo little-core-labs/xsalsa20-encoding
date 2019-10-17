@@ -1,7 +1,8 @@
 xsalsa20-encoding
 =================
 
-> XSalsa20 codec that implements tha abstract-encoding interface.
+> XSalsa20 codec that implements that [abstract-encoding][abstract-encoding] interface.
+> Nonces are generated randomly and prepended to the ciphertext.
 
 ## Installation
 
@@ -12,7 +13,7 @@ $ npm install xsalsa20-encoding
 ## Usage
 
 ```js
-const codec = require('xsalsa20-encoding')(nonce, secretKey)
+const codec = require('xsalsa20-encoding')(secretKey)
 
 // encode a value
 buffer = codec.encode(value)
@@ -27,10 +28,9 @@ value = codec.decode(buffer)
 const crypto = require('crypto')
 const Codec = require('xsalsa20-encoding')
 
-const nonce = crypto.randomBytes(24)
 const key = crypto.randomBytes(32)
 
-const codec = Codec(nonce, key)
+const codec = Codec(key)
 const hello = codec.encode('hello')
 const world = codec.encode('world')
 
@@ -47,25 +47,16 @@ message {
 }
 `)
 
-const codec = Codec(nonce, key, { valueEncoding: Message })
+const codec = Codec(key, { valueEncoding: Message })
 const encoded = codec.encode({ data: 'hello world' })
 const message = codec.decode(encoded) // { data: 'hello world' }
 ```
 
 ## API
 
-### `codec = require('xsalsa20-encoding')([nonce,] secretKey[, opts])`
+### `codec = require('xsalsa20-encoding')([secretKey[, opts])`
 
-Create a codec object from a 24 byte `nonce` and 32 byte `secretKey`. If
-only a 32 byte `nonce` is given, it is treated as a `secretKey`.
-
-```js
-const nonce = crypto.randomBytes(24)
-const key = crypto.randomBytes(32)
-const codec = Codec(nonce, key)
-```
-
-or
+Create a codec object from 32 byte `secretKey`.
 
 ```js
 const key = crypto.randomBytes(32)
@@ -97,9 +88,12 @@ const value = codec.decode(buffer)
 Returns the encoding length for a given `value`.
 
 ```js
-const length = codec.encodingLength('hello world') // 11
+const length = codec.encodingLength('hello world') // 35
 ```
 
 ## License
 
 MIT
+
+
+[abstract-encoding]: https://github.com/mafintosh/abstract-encoding

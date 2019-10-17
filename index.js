@@ -1,48 +1,26 @@
 const xsalsa20 = require('xsalsa20')
 const blake2b = require('blake2b')
+const crypto = require('crypto')
+const assert = require('assert')
 
 class DefaultEncoding {
   encode(value) { return value }
   decode(value) { return value }
 }
 
-function createCodec(nonce, key, opts) {
-  if (Buffer.isBuffer(nonce) && Buffer.isBuffer(key)) {
-    if (32 === nonce.length && 24 === key.length) {
-      [ nonce, key ] = [ key, nonce ]
-    }
-  }
-
-  if (32 === nonce.length && !Buffer.isBuffer(key)) {
-    opts = key
-    key = nonce
-    nonce = Buffer.alloc(24)
-    Buffer.from(blake2b(nonce.length).update(key).digest()).copy(nonce)
-  }
-
+function createCodec(key, opts) {
   if (!opts || 'object' !== typeof opts) {
     opts = {}
   }
 
-  if (!Buffer.isBuffer(key)) {
-    throw new TypeError('Expecting secret key to be a buffer')
-  }
+  assert(Buffer.isBuffer(key), 'key should be a buffer')
+  assert(32 >= key.length, 'key should be 32 bytes')
+  assert('object' === typeof opts, 'options should be an object')
 
-  if (key.length < 32) {
-    throw new RangeError('Expecting secret key to be at least 32 bytes')
-  }
+  const {
+    valueEncoding = new DefaultEncoding()
+  } = opts
 
-  if (!Buffer.isBuffer(nonce)) {
-    throw new TypeError('Expecting nonce to be a buffer')
-  }
-
-  if (nonce.length < 24) {
-    throw new RangeError('Expecting nonce to be at least 24 bytes')
-  }
-
-  const { valueEncoding = new DefaultEncoding() } = opts
-
-  nonce = nonce.slice(0, 24)
   key = key.slice(0, 32)
 
   encode.bytes = 0
@@ -53,22 +31,16 @@ function createCodec(nonce, key, opts) {
     valueEncoding,
     encode,
     decode,
-    nonce,
     key,
   }
 
-  function encode(value, buffer, offset) {
+  function encode(value, buffer, offset)  {
     const encodedValue = valueEncoding.encode(value)
     const plaintext = toBuffer(encodedValue)
-    const length = encodingLength(encodedValue)
+    const length = encodingLength(plaintext)
 
-    if (!Buffer.isBuffer(plaintext)) {
-      throw new TypeError('Cannot convert value to a buffer')
-    }
-
-    if ('number' === typeof buffer) {
-      offset = buffer
-    }
+    assert(Buffer.isBuffer(plaintext), 'cannot convert plaintext to a buffer')
+    assert(plaintext.length, 'cannot encode empty plaintext buffer')
 
     if (!Buffer.isBuffer(buffer)) {
       buffer = Buffer.alloc(length)
@@ -78,11 +50,13 @@ function createCodec(nonce, key, opts) {
       offset = 0
     }
 
-    const ciphertext = buffer.slice(offset)
+    const ciphertext = buffer.slice(offset + 24)
+    const nonce = buffer.slice(offset)
 
-    if (ciphertext.length < length) {
-      throw new RangeError('Cannot store ciphertext in buffer at offset.')
-    }
+    assert(ciphertext.length >= length - 24,
+      'cannot store ciphertext in buffer at offset.')
+
+    crypto.randomBytes(24).copy(nonce)
 
     const xor = xsalsa20(nonce, key)
 
@@ -90,26 +64,29 @@ function createCodec(nonce, key, opts) {
     xor.finalize()
 
     encode.bytes = length
-    return ciphertext
+    return buffer.slice(offset, offset + length)
   }
 
-  function decode(buffer, offset) {
-    if (!offset || 'number' !== typeof offset) {
-      offset = 0
+  function decode(buffer, start, end) {
+    if (!start || 'number' !== typeof start) {
+      start = 0
     }
 
-    if (!Buffer.isBuffer(buffer)) {
-      throw new TypeError('Expecting decode input to be a buffer.')
+    if (!end || 'number' !== typeof end) {
+      end = buffer.length
     }
 
-    const ciphertext = buffer.slice(offset)
+    assert(Buffer.isBuffer(buffer), 'cannot decode non-buffer')
+
+    const ciphertext = buffer.slice(start + 24, end)
     const length = encodingLength(ciphertext)
 
     if (0 === length) {
       throw new RangeError('Cannot decode empty ciphertext at offset.')
     }
 
-    const plaintext = Buffer.allocUnsafe(length)
+    const plaintext = Buffer.allocUnsafe(length - 24)
+    const nonce = buffer.slice(start, start + 24)
     const xor = xsalsa20(nonce, key)
 
     xor.update(ciphertext, plaintext)
@@ -125,7 +102,7 @@ function createCodec(nonce, key, opts) {
 
 function encodingLength(value) {
   const buffer = toBuffer(value)
-  return buffer ? buffer.length : 0
+  return buffer && buffer.length ? 24 + buffer.length : 0
 }
 
 function toBuffer(value) {
@@ -141,7 +118,7 @@ function toBuffer(value) {
     return Buffer.from(value)
   }
 
-  if (value && 'object' === value && 'Buffer' === value.type) {
+  if (value && 'object' === typeof value && 'Buffer' === value.type) {
     if (Array.isArray(value.data)) {
       return Buffer.from(value.data)
     }
