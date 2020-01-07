@@ -102,7 +102,7 @@ function createCodec(key, opts) {
     }
 
     const ciphertext = buffer.slice(offset + NONCE_BYTES)
-    const nonce = buffer.slice(offset)
+    const nonce = buffer.slice(offset, offset + NONCE_BYTES)
 
     assert(ciphertext.length >= length - NONCE_BYTES,
       'cannot store ciphertext in buffer at offset.')
