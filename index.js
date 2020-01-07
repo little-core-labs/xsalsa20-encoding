@@ -163,7 +163,8 @@ function createCodec(key, opts) {
 }
 
 /**
- * @param {}
+ * Computes the encoding length for a given value.
+ * @param {Mixed} value
  * @return {Number}
  */
 function encodingLength(value) {
