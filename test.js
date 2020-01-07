@@ -71,3 +71,16 @@ test('codec = Codec(key, { valueEncoding })', (t) => {
     codec.decode(codec.encode({ data: 'hello world' })))
   t.end()
 })
+
+test('codec.encode() | codec.decode() - detached', (t) => {
+  const key = crypto.randomBytes(32)
+  const codec = Codec(key)
+  const plaintext = Buffer.from('hello')
+  const encoded = codec.encode(plaintext)
+  const nonce = encoded.slice(0, 24)
+  const ciphertext = encoded.slice(24)
+  ciphertext.nonce = nonce
+  const decoded = codec.decode(ciphertext)
+  t.ok(0 === Buffer.compare(plaintext, decoded))
+  t.end()
+})

@@ -3,11 +3,62 @@ const blake2b = require('blake2b')
 const crypto = require('crypto')
 const assert = require('assert')
 
+/**
+ * Converts a value to a buffer, if possible, otherwise
+ * `null` is returned.
+ * @private
+ * @param {?(Mixed)} value
+ * @return {?(Buffer)}
+ */
+function toBuffer(value) {
+  if (Buffer.isBuffer(value)) {
+    return value
+  }
+
+  if ('string' === typeof value) {
+    return Buffer.from(value)
+  }
+
+  if (Array.isArray(value)) {
+    return Buffer.from(value)
+  }
+
+  if (value && 'object' === typeof value && 'Buffer' === value.type) {
+    // istanbul ignore next
+    if (Array.isArray(value.data)) {
+      return Buffer.from(value.data)
+    }
+  }
+
+  return null
+}
+
+/**
+ * The size in bytes for the nonce used to encipher/decipher
+ * values encoded or decoded by this module.
+ * @public
+ */
+const NONCE_BYTES = 24
+
+/**
+ * The default encoding for the `valueEncoding` option.
+ * @private
+ */
 class DefaultEncoding {
   encode(value) { return value }
   decode(value) { return value }
 }
 
+/**
+ * Creates and returns an abstract-encoding interface to encode
+ * and decode values using the Xsalsa20 cipher. Nonces are
+ * prepended (attached) to encoded output and must be a present
+ * when decoding. Detached nonces may be used if the `Buffer` instance
+ * to decode as a `nonce` property set on it.
+ * @param {Buffer} key
+ * @param {?(Object)} opts
+ * @return {Object}
+ */
 function createCodec(key, opts) {
   if (!opts || 'object' !== typeof opts) {
     opts = {}
@@ -50,13 +101,13 @@ function createCodec(key, opts) {
       offset = 0
     }
 
-    const ciphertext = buffer.slice(offset + 24)
+    const ciphertext = buffer.slice(offset + NONCE_BYTES)
     const nonce = buffer.slice(offset)
 
-    assert(ciphertext.length >= length - 24,
+    assert(ciphertext.length >= length - NONCE_BYTES,
       'cannot store ciphertext in buffer at offset.')
 
-    crypto.randomBytes(24).copy(nonce)
+    crypto.randomBytes(NONCE_BYTES).copy(nonce)
 
     const xor = xsalsa20(nonce, key)
 
@@ -78,16 +129,27 @@ function createCodec(key, opts) {
 
     assert(Buffer.isBuffer(buffer), 'cannot decode non-buffer')
 
-    const ciphertext = buffer.slice(start + 24, end)
+    // istanbul ignore next
+    const ciphertext = Buffer.isBuffer(buffer.nonce)
+      ? Object.assign(buffer.slice(start, end), { nonce: buffer.nonce })
+      : buffer.slice(start + NONCE_BYTES, end)
+
+    // istanbul ignore next
+    const nonce = Buffer.isBuffer(buffer.nonce)
+      ? buffer.nonce
+      : buffer.slice(start, start + NONCE_BYTES)
+
     const length = encodingLength(ciphertext)
 
     if (0 === length) {
       throw new RangeError('Cannot decode empty ciphertext at offset.')
     }
 
-    const plaintext = Buffer.allocUnsafe(length - 24)
-    const nonce = buffer.slice(start, start + 24)
     const xor = xsalsa20(nonce, key)
+
+    const plaintext = buffer.nonce
+      ? Buffer.allocUnsafe(length)
+      : Buffer.allocUnsafe(length - NONCE_BYTES)
 
     xor.update(ciphertext, plaintext)
     xor.finalize()
@@ -100,31 +162,22 @@ function createCodec(key, opts) {
   }
 }
 
+/**
+ * @param {}
+ * @return {Number}
+ */
 function encodingLength(value) {
   const buffer = toBuffer(value)
-  return buffer && buffer.length ? 24 + buffer.length : 0
+  if (buffer && buffer.nonce) {
+    return buffer.length
+  } else {
+    return buffer && buffer.length ? NONCE_BYTES + buffer.length : 0
+  }
 }
 
-function toBuffer(value) {
-  if (Buffer.isBuffer(value)) {
-    return value
-  }
-
-  if ('string' === typeof value) {
-    return Buffer.from(value)
-  }
-
-  if (Array.isArray(value)) {
-    return Buffer.from(value)
-  }
-
-  if (value && 'object' === typeof value && 'Buffer' === value.type) {
-    if (Array.isArray(value.data)) {
-      return Buffer.from(value.data)
-    }
-  }
-
-  return null
-}
-
-module.exports = createCodec
+/**
+ * Module exports.
+ */
+module.exports = Object.assign(createCodec, {
+  NONCE_BYTES
+})
