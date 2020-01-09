@@ -1,5 +1,4 @@
 const xsalsa20 = require('xsalsa20')
-const blake2b = require('blake2b')
 const crypto = require('crypto')
 const assert = require('assert')
 
