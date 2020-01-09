@@ -1,6 +1,6 @@
 {
   "name": "xsalsa20-encoding",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "XSalsa20 codec that implements tha abstract-encoding interface.",
   "main": "index.js",
   "scripts": {
