@@ -84,3 +84,13 @@ test('codec.encode() | codec.decode() - detached', (t) => {
   t.ok(0 === Buffer.compare(plaintext, decoded))
   t.end()
 })
+
+test('custom nonce', (t) => {
+  const key = crypto.randomBytes(32)
+  const nonce = crypto.randomBytes(24)
+  const codec = Codec(key, { nonce: () => nonce })
+  const plaintext = Buffer.from('hello')
+  const encoded = codec.encode(plaintext)
+  t.ok(0 === Buffer.compare(nonce, encoded.slice(0, 24)))
+  t.end()
+})

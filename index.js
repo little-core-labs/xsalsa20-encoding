@@ -106,7 +106,11 @@ function createCodec(key, opts) {
     assert(ciphertext.length >= length - NONCE_BYTES,
       'cannot store ciphertext in buffer at offset.')
 
-    crypto.randomBytes(NONCE_BYTES).copy(nonce)
+    if ('function' === typeof opts.nonce) {
+      opts.nonce().slice(0, NONCE_BYTES).copy(nonce)
+    } else {
+      crypto.randomBytes(NONCE_BYTES).copy(nonce)
+    }
 
     const xor = xsalsa20(nonce, key)
 
